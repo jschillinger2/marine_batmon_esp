@@ -18,14 +18,23 @@
 #include "sensesp/transforms/linear.h"
 #include "sensesp_onewire/onewire_temperature.h"
 
+#include <Wire.h>
+#include <INA219_WE.h>
+
 #include "app_config.h"
+
+
 
 using namespace sensesp;
 using namespace sensesp::onewire;
 
+INA219_WE* ina219;         // will be created in setupCurrentSensor()
+
+
 // ──────────────────────────────────────────────────────────────
 void setupVoltageSensors();
 void setupTempSensors();
+void setupCurrentSensor();
 // ──────────────────────────────────────────────────────────────
 
 void setup() {
@@ -44,9 +53,29 @@ void setup() {
 
   setupVoltageSensors();
   setupTempSensors();
+  setupCurrentSensor();
 
   while (true) loop();
 }
+
+void setupCurrentSensor() {
+  Wire.begin();                                      // start I²C
+  ina219 = new INA219_WE(kINA219_I2C_Address);
+  if (!ina219->init()) {
+    debugE("INA219 not found – current readings disabled");
+    return;
+  }
+  ina219->setShuntSizeInOhms(kShuntResistance_Ohm);
+
+  auto* shunt_current =
+      new RepeatSensor<float>(kCurrentReadInterval, []() {
+        return ina219->getCurrent_mA() / 1000.0f;    // A
+      });
+
+  shunt_current
+      ->connect_to(new SKOutputFloat("electrical.shuntCurrent", ""));
+}
+
 
 // ──────────────────────────────────────────────────────────────
 void setupTempSensors() {

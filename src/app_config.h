@@ -30,3 +30,9 @@ constexpr float   kChargeOffVoltage = 14.0f; // V – turn charger OFF above
 /************* Temp Sensors **************/
 constexpr uint8_t kTempSensorPin = 4;        // 1‑Wire data pin
 constexpr uint16_t kTempReadDelay = 500;     // ms between temp samples
+
+/************** Shunt / Current Sensor **************/
+constexpr uint8_t  kINA219_I2C_Address   = 0x40;   // default INA219 addr
+constexpr float    kShuntResistance_mOhm = 100.0f; // change to suit your shunt
+constexpr uint16_t kCurrentReadInterval  = 500;    // ms between current reads
+constexpr float kShuntResistance_Ohm = 0.10f;   // 0.10 Ω = 100 mΩ
