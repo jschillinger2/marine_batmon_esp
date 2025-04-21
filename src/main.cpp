@@ -85,12 +85,12 @@ void setupTempSensors() {
   auto charger_temp = new OneWireTemperature(dts, read_delay, "/chargerTemperature/oneWire");
   charger_temp
       ->connect_to(new Linear(1.0, 0.0, "/chargerTemperature/linear"))
-      ->connect_to(new SKOutputFloat("electrical.chargerTemperature", ""));
+      ->connect_to(new SKOutputFloat("electrical.chargers.new.temperature", ""));
 
   auto newbat_temp = new OneWireTemperature(dts, read_delay, "/newBatCellTemperature/oneWire");
   newbat_temp
       ->connect_to(new Linear(1.0, 0.0, "/newBatCellTemperature/linear"))
-      ->connect_to(new SKOutputFloat("electrical.newBatCellTemperature", ""));
+      ->connect_to(new SKOutputFloat("electrical.batteries.new.temperature", ""));
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ void setupVoltageSensors() {
   /*  charging‑status publisher  */
   static auto charge_status = new ObservableValue<int>(0);   // 0=OFF, 1=ON
   charge_status
-      ->connect_to(new SKOutput<int>("electrical.chargeRelayState", ""));
+      ->connect_to(new SKOutput<int>("electrical.switches.chargeRelay.state", ""));
 
   static bool relay_state = false;
   auto relay_ctl = new LambdaConsumer<float>([&](float volts) {
@@ -132,12 +132,12 @@ void setupVoltageSensors() {
   {
     auto meta = std::make_shared<SKMetadata>("V", "Analog input voltage – New Battery");
     v_new->connect_to(std::make_shared<SKOutput<float>>(
-        "sensors.analog_input.voltageNewBat", "", meta));
+        "electrical.batteries.new.voltage", "", meta));
   }
   {
     auto meta = std::make_shared<SKMetadata>("V", "Analog input voltage – Old Battery");
     v_old->connect_to(std::make_shared<SKOutput<float>>(
-        "sensors.analog_input.voltageOldBat", "", meta));
+        "electrical.batteries.old.voltage", "", meta));
   }
 }
 
