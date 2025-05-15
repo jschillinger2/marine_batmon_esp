@@ -52,14 +52,10 @@ void setup()
   digitalWrite(kChargeRelayPin, LOW);
 
   setupVoltageSensors();
-  //setupTempSensors();
-   setupCurrentSensor();
+ // setupTempSensors();
+ // setupCurrentSensor();
 
-  // while (true)
-  //  loop();
-    
   sensesp_app->start();
-
 }
 
 void setupCurrentSensor()
@@ -112,7 +108,6 @@ void setupTempSensors()
 void setupVoltageSensors()
 {
 
-
   auto v_new = std::make_shared<AnalogInput>(kAnalogInputPinNewBat,
                                              kAnalogInputReadInterval,
                                              "voltage",
@@ -127,13 +122,13 @@ void setupVoltageSensors()
   v_old->attach([v_old]
                 { debugD("Old‑battery V: %f", v_old->get()); });
 
-// Voltage outputs
+  // Voltage outputs
 
-      v_new
-  ->connect_to(new SKOutputFloat("electrical.batteries.new.voltage", ""));
+  v_new
+      ->connect_to(new SKOutputFloat("electrical.batteries.new.voltage", ""));
 
   v_old
-  ->connect_to(new SKOutputFloat("electrical.batteries.old.voltage", ""));
+      ->connect_to(new SKOutputFloat("electrical.batteries.old.voltage", ""));
 
   /*  charging‑status publisher  */
   static auto charge_status = new ObservableValue<int>(0); // 0=OFF, 1=ON
@@ -154,9 +149,7 @@ void setupVoltageSensors()
       charge_status->set(1);
       debugI("Relay ON (%.2f V > %.2f V)", volts, kChargeOffVoltage);
     } });
-    v_old->connect_to(relay_ctl);
-
-  
+  v_old->connect_to(relay_ctl);
 }
 
 // ──────────────────────────────────────────────────────────────
