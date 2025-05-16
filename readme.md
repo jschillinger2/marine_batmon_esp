@@ -13,10 +13,12 @@ Smart ESP32 firmware built with [SensESP](https://github.com/SignalK/SensESP) to
 | New‑battery cell temperature | DS18B20 (1‑Wire) | `electrical.batteries.new.temperature` |
 | Charger heat‑sink temperature | DS18B20 (1‑Wire) | `electrical.chargers.main.temperature` |
 | Charger relay state | GPIO‑driven relay | `electrical.switches.chargeRelay.state` |
+| Voltage to State of Charge Conversion | Internal Algorithm | `electrical.batteries.new.chargestate`, `electrical.batteries.old.chargestate` |
 
-> **Why these paths?** They follow the Signal K data‑model conventions for batteries, chargers, and switches, so dashboards and apps pick them up automatically.
+The firmware also includes a precise voltage-to-state-of-charge conversion algorithm, which interpolates battery voltage readings to determine the state of charge based on battery type. Both lead-acid and LiFePo4 battery types are supported.
 
 ---
+
 ## 🛠️ Hardware
 
 * FireBeetle ESP32 (or any ESP32‑Dev board)
@@ -67,9 +69,14 @@ The device will join Wi‑Fi, auto‑discover your Signal K server (mDNS) or u
 /******** Shunt **********/  kINA219_I2C_Address,
                               kShuntResistance_Ohm,  // 0.10 Ω default
                               kCurrentReadInterval
+/******** SOC Conversion **/ voltagesLeadAcid, socLeadAcid,
+                              voltagesLiFePo4, socLiFePo4
 ```
 
+The SOC conversion uses predefined voltage-to-soc mappings for both types of batteries, which can be adjusted in `app_config.h`.
+
 ---
+
 ## 📝 Wiring Notes
 
 * **I²C** – connect INA219 SDA/SCL to ESP32 GPIO 21/22 (or whatever your board uses).
@@ -77,7 +84,10 @@ The device will join Wi‑Fi, auto‑discover your Signal K server (mDNS) or u
 * **Voltage dividers** – ensure the divider output never exceeds 3.3 V. Example 33 kΩ/10 kΩ covers up to ~15 V.
 * **Relay** – low‑side N‑MOSFET or opto‑isolated relay board driven by `kChargeRelayPin` (GPIO 16 default).
 
+To dynamically adjust the SOC conversion for different battery architectures, simply update the values in `app_config.h`.
+
 ---
+
 ## 🖥️ Dashboards & Alerts
 
 Because the firmware uses standard Signal K paths, tools like Grafana (via InfluxDB plugin) or SignalK‑native dashboards will auto‑suggest the data. Add threshold alerts for low voltage or high current as needed.
