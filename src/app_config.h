@@ -10,7 +10,7 @@ constexpr const char* kWifiPassword   = "xx";   // Wi‑Fi password
 
 /********* Signal K Server *********/
 // Leave kSKServerIP empty ("") for auto‑discovery via mDNS.
-constexpr const char*  kSKServerIP    = "";        // e.g. "10.10.7.16"
+constexpr const char*  kSKServerIP    = "10.234.212.244";        // e.g. "10.10.7.16"
 constexpr const uint16_t kSKServerPort = 3000;     // usual SK port
 
 /*********** Battery Inputs ***********/
@@ -23,9 +23,9 @@ constexpr unsigned int kAnalogInputReadInterval = 500; // ms between samples
 constexpr float kAnalogInputScale = 1.0f / 4095.0f * 3.3f * 12.2f;
 
 /************* Charger Relay *************/
-constexpr uint8_t kChargeRelayPin   = 16;    // GPIO driving the relay
-constexpr float   kChargeOnVoltage  = 12.8f; // V – turn charger ON below
-constexpr float   kChargeOffVoltage = 14.0f; // V – turn charger OFF above
+constexpr uint8_t kChargeRelayPin   = 12;//12;    // GPIO driving the relay
+constexpr float   kChargeOnVoltage  =  1.0f; //12.8f; // V – turn charger ON below
+constexpr float   kChargeOffVoltage = 1.1f;// 14.0f; // V – turn charger OFF above
 
 /************* Temp Sensors **************/
 constexpr uint8_t kTempSensorPin = 4;        // 1‑Wire data pin
@@ -33,6 +33,6 @@ constexpr uint16_t kTempReadDelay = 500;     // ms between temp samples
 
 /************** Shunt / Current Sensor **************/
 constexpr uint8_t  kINA219_I2C_Address   = 0x40;   // default INA219 addr
-constexpr float    kShuntResistance_mOhm = 100.0f; // change to suit your shunt
+constexpr float    kShuntResistance_mOhm =  0.001f; // change to suit your shunt
 constexpr uint16_t kCurrentReadInterval  = 500;    // ms between current reads
 constexpr float kShuntResistance_Ohm = 0.10f;   // 0.10 Ω = 100 mΩ

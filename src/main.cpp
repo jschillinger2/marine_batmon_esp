@@ -51,8 +51,8 @@ void setup()
   pinMode(kChargeRelayPin, OUTPUT);
   digitalWrite(kChargeRelayPin, LOW);
 
-  setupVoltageSensors();
- // setupTempSensors();
+ // setupVoltageSensors();
+  setupTempSensors();
  // setupCurrentSensor();
 
   sensesp_app->start();
@@ -88,6 +88,26 @@ void setupTempSensors()
   DallasTemperatureSensors *dts = new DallasTemperatureSensors(kTempSensorPin);
   uint32_t read_delay = 500;
 
+  delay(1000); // give it time to power up and register devices
+  int sensor_count = dts->get_sensor_count();
+
+  if (sensor_count == 0) {
+    debugE("No Dallas temperature sensors found on pin %d", kTempSensorPin);
+    return;
+  }
+
+  debugI("Found %d Dallas temperature sensor(s):", sensor_count);
+
+
+  // Measure coolant temperature
+  auto* coolant_temp =
+      new OneWireTemperature(dts, read_delay, "/coolantTemperature/oneWire");
+
+  coolant_temp->connect_to(new Linear(1.0, 0.0, "/coolantTemperature/linear"))
+      ->connect_to(new SKOutputFloat("propulsion.mainEngine.coolantTemperature",
+                                     "/coolantTemperature/skPath"));
+
+/*
   auto charger_temp = new OneWireTemperature(dts, read_delay, "/chargerTemperature/oneWire");
   charger_temp
       ->connect_to(new Linear(1.0, 0.0, "/chargerTemperature/linear"))
@@ -102,6 +122,7 @@ void setupTempSensors()
                        { debugD("Charger temp: %.1f °C", charger_temp->get()); });
   newbat_temp->attach([newbat_temp]
                       { debugD("New‑bat temp: %.1f °C", newbat_temp->get()); });
+                       */
 }
 
 // ──────────────────────────────────────────────────────────────
