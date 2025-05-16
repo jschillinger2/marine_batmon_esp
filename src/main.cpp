@@ -163,12 +163,12 @@ void setupVoltageSensors()
       relay_state = false;
       digitalWrite(kChargeRelayPin, LOW);
       charge_status->set(0);
-      debugI("Relay OFF (%.2f V < %.2f V)", volts, kChargeOnVoltage);
-    } else if (!relay_state && volts > kChargeOffVoltage) {
+      debugI("Relay OFF (%.2f V < %.2f V)", volts, kChargeOffVoltage);
+    } else if (!relay_state && volts > kChargeOnVoltage) {
       relay_state = true;
       digitalWrite(kChargeRelayPin, HIGH);
       charge_status->set(1);
-      debugI("Relay ON (%.2f V > %.2f V)", volts, kChargeOffVoltage);
+      debugI("Relay ON (%.2f V > %.2f V)", volts, kChargeOnVoltage);
     } });
   v_old->connect_to(relay_ctl);
 }
