@@ -6,6 +6,8 @@
 
 #include <memory>
 #include <cstring>
+#include <vector>
+#include <algorithm>
 
 #include "sensesp.h"
 #include "sensesp/sensors/analog_input.h"
@@ -27,6 +29,45 @@ using namespace sensesp;
 using namespace sensesp::onewire;
 
 INA219_WE *ina219; // will be created in setupCurrentSensor()
+
+// Convert voltage to state of charge
+float interpolate(float x, const std::vector<float> &xPoints, const std::vector<float> &yPoints)
+{
+  auto it = std::lower_bound(xPoints.begin(), xPoints.end(), x);
+  int idx = std::distance(xPoints.begin(), it);
+
+  if (idx == 0)
+  {
+    return yPoints.front();
+  }
+  else if (idx == xPoints.size())
+  {
+    return yPoints.back();
+  }
+
+  // Interpolate between points
+  float x0 = xPoints[idx - 1], y0 = yPoints[idx - 1];
+  float x1 = xPoints[idx], y1 = yPoints[idx];
+  return y0 + (x - x0) * (y1 - y0) / (x1 - x0);
+}
+
+float convertVoltageToSOC(float voltage, bool isLeadAcid)
+{
+  std::vector<float> voltagesLeadAcid = {1.0f, 1.0f, 12.2f, 12.4f, 12.6f};
+  std::vector<float> socLeadAcid = {0.0f, 0.25f, 0.5f, 0.75f, 1.0f};
+
+  std::vector<float> voltagesLiFePo4 = {1.0f, 1.0f, 13.2f, 13.4f, 13.6f};
+  std::vector<float> socLiFePo4 = {0.0f, 0.25f, 0.5f, 0.75f, 1.0f};
+
+  if (isLeadAcid)
+  {
+    return interpolate(voltage, voltagesLeadAcid, socLeadAcid);
+  }
+  else
+  {
+    return interpolate(voltage, voltagesLiFePo4, socLiFePo4);
+  }
+}
 
 // ──────────────────────────────────────────────────────────────
 void setupVoltageSensors();
@@ -51,9 +92,9 @@ void setup()
   pinMode(kChargeRelayPin, OUTPUT);
   digitalWrite(kChargeRelayPin, LOW);
 
- // setupVoltageSensors();
+  setupVoltageSensors();
   setupTempSensors();
- // setupCurrentSensor();
+  setupCurrentSensor();
 
   sensesp_app->start();
 }
@@ -93,36 +134,36 @@ void setupTempSensors()
   // Count all connected temperature sensors
   OWDevAddr addr;
   int sensor_count = 0;
-  while (dts->get_next_address(&addr)) {
-      sensor_count++;
+  while (dts->get_next_address(&addr))
+  {
+    sensor_count++;
   }
   debugI("Number of temperature sensors found: %d", sensor_count);
 
-
   // Measure coolant temperature
-  auto* coolant_temp =
+  auto *coolant_temp =
       new OneWireTemperature(dts, read_delay, "/coolantTemperature/oneWire");
 
   coolant_temp->connect_to(new Linear(1.0, 0.0, "/coolantTemperature/linear"))
       ->connect_to(new SKOutputFloat("propulsion.mainEngine.coolantTemperature",
                                      "/coolantTemperature/skPath"));
 
-/*
-  auto charger_temp = new OneWireTemperature(dts, read_delay, "/chargerTemperature/oneWire");
-  charger_temp
-      ->connect_to(new Linear(1.0, 0.0, "/chargerTemperature/linear"))
-      ->connect_to(new SKOutputFloat("electrical.chargers.new.temperature", ""));
+  /*
+    auto charger_temp = new OneWireTemperature(dts, read_delay, "/chargerTemperature/oneWire");
+    charger_temp
+        ->connect_to(new Linear(1.0, 0.0, "/chargerTemperature/linear"))
+        ->connect_to(new SKOutputFloat("electrical.chargers.new.temperature", ""));
 
-  auto newbat_temp = new OneWireTemperature(dts, read_delay, "/newBatCellTemperature/oneWire");
-  newbat_temp
-      ->connect_to(new Linear(1.0, 0.0, "/newBatCellTemperature/linear"))
-      ->connect_to(new SKOutputFloat("electrical.batteries.new.temperature", ""));
+    auto newbat_temp = new OneWireTemperature(dts, read_delay, "/newBatCellTemperature/oneWire");
+    newbat_temp
+        ->connect_to(new Linear(1.0, 0.0, "/newBatCellTemperature/linear"))
+        ->connect_to(new SKOutputFloat("electrical.batteries.new.temperature", ""));
 
-  charger_temp->attach([charger_temp]
-                       { debugD("Charger temp: %.1f °C", charger_temp->get()); });
-  newbat_temp->attach([newbat_temp]
-                      { debugD("New‑bat temp: %.1f °C", newbat_temp->get()); });
-                       */
+    charger_temp->attach([charger_temp]
+                         { debugD("Charger temp: %.1f °C", charger_temp->get()); });
+    newbat_temp->attach([newbat_temp]
+                        { debugD("New‑bat temp: %.1f °C", newbat_temp->get()); });
+                         */
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -156,21 +197,45 @@ void setupVoltageSensors()
   charge_status
       ->connect_to(new SKOutput<int>("electrical.switches.chargeRelay.state", ""));
 
+  /* state of charge publishers */
+  static auto new_state_charge = new ObservableValue<float>(0); // 0=empty, 1=full
+  new_state_charge
+      ->connect_to(new SKOutput<float>("electrical.batteries.new.chargestate", ""));
+  static auto old_state_charge = new ObservableValue<float>(0); // 0=empty, 1=full
+  old_state_charge
+      ->connect_to(new SKOutput<float>("electrical.batteries.old.chargestate", ""));
+
   static bool relay_state = false;
   auto relay_ctl = new LambdaConsumer<float>([&](float volts)
                                              {
-    if (relay_state && volts < kChargeOffVoltage) {
-      relay_state = false;
-      digitalWrite(kChargeRelayPin, LOW);
-      charge_status->set(0);
-      debugI("Relay OFF (%.2f V < %.2f V)", volts, kChargeOffVoltage);
-    } else if (!relay_state && volts > kChargeOnVoltage) {
-      relay_state = true;
-      digitalWrite(kChargeRelayPin, HIGH);
-      charge_status->set(1);
-      debugI("Relay ON (%.2f V > %.2f V)", volts, kChargeOnVoltage);
-    } });
+                                               // charge relay
+                                               if (relay_state && volts < kChargeOffVoltage)
+                                               {
+                                                 relay_state = false;
+                                                 digitalWrite(kChargeRelayPin, LOW);
+                                                 charge_status->set(0);
+                                                 debugI("Relay OFF (%.2f V < %.2f V)", volts, kChargeOffVoltage);
+                                               }
+                                               else if (!relay_state && volts > kChargeOnVoltage)
+                                               {
+                                                 relay_state = true;
+                                                 digitalWrite(kChargeRelayPin, HIGH);
+                                                 charge_status->set(1);
+                                                 debugI("Relay ON (%.2f V > %.2f V)", volts, kChargeOnVoltage);
+                                               }
+
+                                               // state of charge
+                                               old_state_charge->set(convertVoltageToSOC(volts, true)); // Assume lead acid
+                                             });
   v_old->connect_to(relay_ctl);
+
+  auto new_state_ctrl = new LambdaConsumer<float>([&](float volts)
+                                                  {
+                                                    // state of charge
+                                                    new_state_charge->set(convertVoltageToSOC(volts, false)); // Assume LiFePo4
+                                                  });
+
+  v_new->connect_to(new_state_ctrl);
 }
 
 // ──────────────────────────────────────────────────────────────
