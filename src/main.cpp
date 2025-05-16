@@ -89,14 +89,14 @@ void setupTempSensors()
   uint32_t read_delay = 500;
 
   delay(1000); // give it time to power up and register devices
-  int sensor_count = dts->get_sensor_count();
 
-  if (sensor_count == 0) {
-    debugE("No Dallas temperature sensors found on pin %d", kTempSensorPin);
-    return;
+  // Count all connected temperature sensors
+  OWDevAddr addr;
+  int sensor_count = 0;
+  while (dts->get_next_address(&addr)) {
+      sensor_count++;
   }
-
-  debugI("Found %d Dallas temperature sensor(s):", sensor_count);
+  debugI("Number of temperature sensors found: %d", sensor_count);
 
 
   // Measure coolant temperature
