@@ -4,6 +4,16 @@
 // Modify the constants below, then re‑compile & flash.
 // -------------------------------------------------------------
 
+#include <vector>
+
+// Lead Acid Battery Voltage and SOC Points
+const std::vector<float> voltagesLeadAcid = {11.0f, 12.0f, 13.0f};
+const std::vector<float> socLeadAcid = {0.0f, 0.5f, 1.0f};
+
+// LiFePo4 Battery Voltage and SOC Points
+const std::vector<float> voltagesLiFePo4 = {11.5f, 13.0f, 14.2f};
+const std::vector<float> socLiFePo4 = {0.0f, 0.50f, 1.0f};
+
 /************* Network *************/
 constexpr const char* kWifiSSID       = "xx";   // Wi‑Fi SSID
 constexpr const char* kWifiPassword   = "xx";   // Wi‑Fi password
@@ -23,9 +33,9 @@ constexpr unsigned int kAnalogInputReadInterval = 500; // ms between samples
 constexpr float kAnalogInputScale = 1.0f / 4095.0f * 3.3f * 12.2f;
 
 /************* Charger Relay *************/
-constexpr uint8_t kChargeRelayPin   = 12;//12;    // GPIO driving the relay
-constexpr float   kChargeOnVoltage  =  1.0f; //12.8f; // V – turn charger ON below
-constexpr float   kChargeOffVoltage = 1.1f;// 14.0f; // V – turn charger OFF above
+constexpr uint8_t kChargeRelayPin   = 12;    // GPIO driving the relay
+constexpr float   kChargeOnVoltage  =  14.0f; // V – turn charger ON below
+constexpr float   kChargeOffVoltage = 13.0; // V – turn charger OFF above
 
 /************* Temp Sensors **************/
 constexpr uint8_t kTempSensorPin = 4;        // 1‑Wire data pin

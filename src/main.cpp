@@ -53,12 +53,6 @@ float interpolate(float x, const std::vector<float> &xPoints, const std::vector<
 
 float convertVoltageToSOC(float voltage, bool isLeadAcid)
 {
-  std::vector<float> voltagesLeadAcid = {1.0f, 1.0f, 12.2f, 12.4f, 12.6f};
-  std::vector<float> socLeadAcid = {0.0f, 0.25f, 0.5f, 0.75f, 1.0f};
-
-  std::vector<float> voltagesLiFePo4 = {1.0f, 1.0f, 13.2f, 13.4f, 13.6f};
-  std::vector<float> socLiFePo4 = {0.0f, 0.25f, 0.5f, 0.75f, 1.0f};
-
   if (isLeadAcid)
   {
     return interpolate(voltage, voltagesLeadAcid, socLeadAcid);
