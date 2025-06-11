@@ -1,8 +1,4 @@
 // main.cpp – Signal K Battery Control (no config‑paths)
-// -------------------------------------------------------------
-// Updated 20 Apr 2025
-//   • Dropped all per‑device config paths (“” used instead).
-// -------------------------------------------------------------
 
 #include <memory>
 #include <cstring>
@@ -72,14 +68,24 @@ void setupCurrentSensor();
 void setup()
 {
   SetupLogging(ESP_LOG_DEBUG);
+  debugI("Started App");
 
   SensESPAppBuilder base_builder;
   auto *builder = base_builder.set_hostname("BatteryControl");
 
   if (strlen(kWifiSSID) > 0)
+  {
+    debugI("Setting WiFi credentials - SSID: %s, Password: %s", kWifiSSID, kWifiPassword);
     builder->set_wifi_client(kWifiSSID, kWifiPassword);
+  }
+  else
+    debugI("No WiFi SSID configured");
+
   if (strlen(kSKServerIP) > 0)
+  {
+    debugI("Setting KServer Manual to IP: %s, Port: %d", kSKServerIP, kSKServerPort);
     builder->set_sk_server(kSKServerIP, kSKServerPort);
+  }
 
   sensesp_app = builder->get_app();
 
@@ -95,6 +101,7 @@ void setup()
 
 void setupCurrentSensor()
 {
+  debugI("Setting up Current Sensors - START");
   Wire.begin(); // start I²C
   ina219 = new INA219_WE(kINA219_I2C_Address);
   if (!ina219->init())
@@ -115,54 +122,39 @@ void setupCurrentSensor()
 
   shunt_current->attach([shunt_current]
                         { debugD("Shunt current: %.3f A", shunt_current->get()); });
+  debugI("Setting up Current Sensors - STOP");
 }
 
 // ──────────────────────────────────────────────────────────────
 void setupTempSensors()
 {
+  debugI("Setting up Temp Sensors - START");
+
   DallasTemperatureSensors *dts = new DallasTemperatureSensors(kTempSensorPin);
   uint32_t read_delay = 500;
 
-  delay(1000); // give it time to power up and register devices
+  auto charger_temp = new OneWireTemperature(dts, read_delay, "/chargerTemperature/oneWire");
+  charger_temp
+      ->connect_to(new Linear(1.0, 0.0, "/chargerTemperature/linear"))
+      ->connect_to(new SKOutputFloat("electrical.chargers.new.temperature", ""));
 
-  // Count all connected temperature sensors
-  OWDevAddr addr;
-  int sensor_count = 0;
-  while (dts->get_next_address(&addr))
-  {
-    sensor_count++;
-  }
-  debugI("Number of temperature sensors found: %d", sensor_count);
+  auto newbat_temp = new OneWireTemperature(dts, read_delay, "/newBatCellTemperature/oneWire");
+  newbat_temp
+      ->connect_to(new Linear(1.0, 0.0, "/newBatCellTemperature/linear"))
+      ->connect_to(new SKOutputFloat("electrical.batteries.new.temperature", ""));
 
-  // Measure coolant temperature
-  auto *coolant_temp =
-      new OneWireTemperature(dts, read_delay, "/coolantTemperature/oneWire");
+  charger_temp->attach([charger_temp]
+                       { debugD("Charger temp: %.1f °C", charger_temp->get()); });
+  newbat_temp->attach([newbat_temp]
+                      { debugD("New‑bat temp: %.1f °C", newbat_temp->get()); });
 
-  coolant_temp->connect_to(new Linear(1.0, 0.0, "/coolantTemperature/linear"))
-      ->connect_to(new SKOutputFloat("propulsion.mainEngine.coolantTemperature",
-                                     "/coolantTemperature/skPath"));
-
-  /*
-    auto charger_temp = new OneWireTemperature(dts, read_delay, "/chargerTemperature/oneWire");
-    charger_temp
-        ->connect_to(new Linear(1.0, 0.0, "/chargerTemperature/linear"))
-        ->connect_to(new SKOutputFloat("electrical.chargers.new.temperature", ""));
-
-    auto newbat_temp = new OneWireTemperature(dts, read_delay, "/newBatCellTemperature/oneWire");
-    newbat_temp
-        ->connect_to(new Linear(1.0, 0.0, "/newBatCellTemperature/linear"))
-        ->connect_to(new SKOutputFloat("electrical.batteries.new.temperature", ""));
-
-    charger_temp->attach([charger_temp]
-                         { debugD("Charger temp: %.1f °C", charger_temp->get()); });
-    newbat_temp->attach([newbat_temp]
-                        { debugD("New‑bat temp: %.1f °C", newbat_temp->get()); });
-                         */
+  debugI("Setting up Current Sensors - STOP");
 }
 
 // ──────────────────────────────────────────────────────────────
 void setupVoltageSensors()
 {
+  debugI("Setting up Voltage Sensors - START");
 
   auto v_new = std::make_shared<AnalogInput>(kAnalogInputPinNewBat,
                                              kAnalogInputReadInterval,
@@ -230,6 +222,7 @@ void setupVoltageSensors()
                                                   });
 
   v_new->connect_to(new_state_ctrl);
+  debugI("Setting up Voltage Sensors - STOP");
 }
 
 // ──────────────────────────────────────────────────────────────
